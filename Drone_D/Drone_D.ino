@@ -18,10 +18,7 @@ int potValue = 950;
 char command;
 String ss= "";
 float pwm1, pwm2, pwm3, pwm4;
-int r1 = 0;
-int r2 = 0;
-int r3 = 0;
-int r4 = 0;
+int r1 = 0, r2 = 0, r3 = 0, r4 = 0;
 int startFlag = 0;
 float voltageSensor, voltage;
 const float factor = 11.87/2.36;
@@ -99,9 +96,13 @@ float KpPitch = KpRoll*1;
 float KiPitch = KiRoll*1;
 float KdPitch = KdRoll*1;
 
-float Kp[3] = {0, KpPitch, KpRoll};    // P coefficients in that order : Yaw, Pitch, Roll
-float Ki[3] = {0, KiPitch, KiRoll};    // I coefficients in that order : Yaw, Pitch, Roll
-float Kd[3] = {0, KdPitch, KdRoll};    // D coefficients in that order : Yaw, Pitch, Roll
+float KpYaw = 0;
+float KiYaw = 0;
+float KdYaw = 0;
+
+//float Kp[3] = {0, KpPitch, KpRoll};    // P coefficients in that order : Yaw, Pitch, Roll
+//float Ki[3] = {0, KiPitch, KiRoll};    // I coefficients in that order : Yaw, Pitch, Roll
+//float Kd[3] = {0, KdPitch, KdRoll};    // D coefficients in that order : Yaw, Pitch, Roll
 
 unsigned long StartTime;
 unsigned long CurrentTime;
@@ -208,69 +209,31 @@ void loop() {
             else if(potValue <= 1430) potValue -= 10;
             else potValue -= 1;
             break;
-          case 'S':
-            stopFlag = true;
-            break;
-          case 'F':
-            setPoints[PITCH] += 10;
-            break;
-          case 'B':
-            setPoints[PITCH] -= 10;
-            break;
-          case 'L':
-            setPoints[ROLL] += 10;
-            break;
-          case 'R':
-            setPoints[ROLL] -= 10;
-            break;
           case 'C':
             setPoints[ROLL] = 0;
             setPoints[PITCH] = 0;
             break;
-          case 11:
-            r1++;
-            break;
-          case 10:
-            r1--;
-            break;
-          case 21:
-            r2++;
-            break;
-          case 20:
-            r2--;
-            break;
-          case 31:
-            r3++;
-            break;
-          case 30:
-            r3--;
-            break;
-          case 41:
-            r4++;
-            break;
-          case 40:
-            r4--;
-            break;
-          case 'P':
-            K += 10;
-            break;
-          case 'I':
-            Ti += 10;
-            break;
-          case 'D':
-            Td += 10;
-            break;
-          case 'p':
-            K -= 10;
-            break;
-          case 'i':
-            Ti -= 10;
-            break;
-          case 'd':
-            Td -= 10;
-            break;  
+          case 'S': stopFlag = true; break;
+          case 'F': setPoints[PITCH] += 10; break;
+          case 'B': setPoints[PITCH] -= 10; break;
+          case 'L': setPoints[ROLL] += 10; break;
+          case 'R': setPoints[ROLL] -= 10; break;
+          case 11: r1++; break;
+          case 10: r1--; break;
+          case 21: r2++; break;
+          case 20: r2--; break;
+          case 31: r3++; break;
+          case 30: r3--; break;
+          case 41: r4++; break;
+          case 40: r4--; break;
+          case 'P': K += 10; PIDUpdate(); break;
+          case 'I': Ti += 10; PIDUpdate(); break;
+          case 'D': Td += 10; PIDUpdate(); break;
+          case 'p': K -= 10; PIDUpdate(); break;
+          case 'i': Ti -= 10; PIDUpdate(); break;
+          case 'd': Td -= 10; PIDUpdate(); break;  
          }
-
+         
 //         Serial.println((int)command);
      }
      
@@ -343,7 +306,7 @@ void YPR() {
     if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet 
         #ifdef OUTPUT_READABLE_YAWPITCHROLL
             // display Euler angles in degrees
-            mpu.dmpGetGyro(&gyro, fifoBuffer);
+//            mpu.dmpGetGyro(&gyro, fifoBuffer);
             mpu.dmpGetQuaternion(&q, fifoBuffer);
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
@@ -364,9 +327,9 @@ void YPRError() {
     iErrors[PITCH] += errors[PITCH];
     iErrors[ROLL]  += errors[ROLL];
 
-//    iErrors[YAW]   = minMax(iErrors[YAW],   -400/Ki[YAW],   400/Ki[YAW]);
-//    iErrors[PITCH] = minMax(iErrors[PITCH], -400/Ki[PITCH], 400/Ki[PITCH]);
-//    iErrors[ROLL]  = minMax(iErrors[ROLL],  -400/Ki[ROLL],  400/Ki[ROLL]);
+//    iErrors[YAW]   = minMax(iErrors[YAW],   -400/KiYaw,   400/KiYaw);
+//    iErrors[PITCH] = minMax(iErrors[PITCH], -400/KiPitch, 400/KiPitch);
+//    iErrors[ROLL]  = minMax(iErrors[ROLL],  -400/KiRoll,  400/KiRoll);
 
     dErrors[YAW]   = errors[YAW]   - preErrors[YAW];
     dErrors[PITCH] = errors[PITCH] - preErrors[PITCH];
@@ -397,17 +360,17 @@ void PIDController() {
     // Do not calculate anything if throttle is 0
     if (thrust >= 1000) {
 //        // PID = e.Kp + ∫e.Ki + Δe.Kd
-        yaw_pid   = (errors[YAW]   * Kp[YAW])   + (iErrors[YAW]   * Ki[YAW])   * dt + (dErrors[YAW]   * Kd[YAW])   /dt;
-        pitch_pid = (errors[PITCH] * Kp[PITCH]) + (iErrors[PITCH] * Ki[PITCH]) * dt + (dErrors[PITCH] * Kd[PITCH]) /dt;
-        roll_pid  = (errors[ROLL]  * Kp[ROLL])  + (iErrors[ROLL]  * Ki[ROLL])  * dt + (dErrors[ROLL]  * Kd[ROLL])  /dt;
+        yaw_pid   = (errors[YAW]   * KpYaw)   + (iErrors[YAW]   * KiYaw)   * dt + (dErrors[YAW]   * KdYaw)   /dt;
+        pitch_pid = (errors[PITCH] * KpPitch) + (iErrors[PITCH] * KiPitch) * dt + (dErrors[PITCH] * KdPitch) /dt;
+        roll_pid  = (errors[ROLL]  * KpRoll)  + (iErrors[ROLL]  * KiRoll)  * dt + (dErrors[ROLL]  * KdRoll)  /dt;
 
-//        yaw_pid   = (errors[YAW]   * Kp[YAW])   + (iErrors[YAW]   * Ki[YAW])   * dt + (dErrors[YAW]   * Kd[YAW])   /dt - (Ixx - Iyy)/k   * (dErrors[PITCH] / dt) * (dErrors[ROLL] / dt);
-//        pitch_pid = (errors[PITCH] * Kp[PITCH]) + (iErrors[PITCH] * Ki[PITCH]) * dt + (dErrors[PITCH] * Kd[PITCH]) /dt - (Izz - Ixx)/b/L * (dErrors[ROLL]  / dt) * (dErrors[YAW]  / dt);
-//        roll_pid  = (errors[ROLL]  * Kp[ROLL])  + (iErrors[ROLL]  * Ki[ROLL])  * dt + (dErrors[ROLL]  * Kd[ROLL])  /dt - (Iyy - Izz)/b/L * (dErrors[PITCH] / dt) * (dErrors[YAW]  / dt);
+//        yaw_pid   = (errors[YAW]   * KpYaw)   + (iErrors[YAW]   * KiYaw)   * dt + (dErrors[YAW]   * KdYaw)   /dt - (Ixx - Iyy)/k   * (dErrors[PITCH] / dt) * (dErrors[ROLL] / dt);
+//        pitch_pid = (errors[PITCH] * KpPitch) + (iErrors[PITCH] * KiPitch) * dt + (dErrors[PITCH] * KdPitch) /dt - (Izz - Ixx)/b/L * (dErrors[ROLL]  / dt) * (dErrors[YAW]  / dt);
+//        roll_pid  = (errors[ROLL]  * KpRoll)  + (iErrors[ROLL]  * KiRoll)  * dt + (dErrors[ROLL]  * KdRoll)  /dt - (Iyy - Izz)/b/L * (dErrors[PITCH] / dt) * (dErrors[YAW]  / dt);
 
-//       yaw_pid   = yaw_pid +   Kp[YAW]   * (errors[YAW]   - preErrors[YAW])   + Ki[YAW]   * dt * errors[YAW]   + Kd[YAW]   * (errors[YAW]   - 2*preErrors[YAW]   + prepreErrors[YAW])   /dt;
-//       pitch_pid = pitch_pid + Kp[PITCH] * (errors[PITCH] - preErrors[PITCH]) + Ki[PITCH] * dt * errors[PITCH] + Kd[PITCH] * (errors[PITCH] - 2*preErrors[PITCH] + prepreErrors[PITCH]) /dt;
-//       roll_pid  = roll_pid +  Kp[ROLL]  * (errors[ROLL]  - preErrors[ROLL])  + Ki[ROLL]  * dt * errors[ROLL]  + Kd[ROLL]  * (errors[ROLL]  - 2*preErrors[ROLL]  + prepreErrors[ROLL])  /dt;
+//       yaw_pid   = yaw_pid +   KpYaw   * (errors[YAW]   - preErrors[YAW])   + KiYaw   * dt * errors[YAW]   + KdYaw   * (errors[YAW]   - 2*preErrors[YAW]   + prepreErrors[YAW])   /dt;
+//       pitch_pid = pitch_pid + KpPitch * (errors[PITCH] - preErrors[PITCH]) + KiPitch * dt * errors[PITCH] + KdPitch * (errors[PITCH] - 2*preErrors[PITCH] + prepreErrors[PITCH]) /dt;
+//       roll_pid  = roll_pid +  KpRoll  * (errors[ROLL]  - preErrors[ROLL])  + KiRoll  * dt * errors[ROLL]  + KdRoll  * (errors[ROLL]  - 2*preErrors[ROLL]  + prepreErrors[ROLL])  /dt;
 
         // Keep values within acceptable range. TODO export hard-coded values in variables/const
 //        yaw_pid   = minMax(yaw_pid, -400, 400);
@@ -450,6 +413,17 @@ void PIDController() {
     pwm2 = minMax(pwm2, 950, 2000);
     pwm3 = minMax(pwm3, 950, 2000);
     pwm4 = minMax(pwm4, 950, 2000);
+}
+
+void PIDUpdate(){
+  KpRoll = K;
+  KiRoll = K/Ti;
+  KdRoll = K*Td;
+  
+  KpPitch = KpRoll*1;
+  KiPitch = KiRoll*1;
+  KdPitch = KdRoll*1;
+  return 0;
 }
 
 float minMax(float value, float min, float max) {
