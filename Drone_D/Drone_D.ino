@@ -199,13 +199,14 @@ void loop() {
          command = Serial3.read();
          switch(command){
           case 'A':
-            if(potValue < 1250) potValue += 50;
+            if(potValue < 1300) potValue += 50;
             else if(potValue < 1430) potValue += 10;
             else potValue += 1;
             stopFlag = false;
             break;
           case 'V':
-            if(potValue <= 1250) potValue -= 50;
+            if(potValue < 1000) potValue = 950;
+            else if(potValue <= 1300) potValue -= 50;
             else if(potValue <= 1430) potValue -= 10;
             else potValue -= 1;
             break;
@@ -242,10 +243,15 @@ void loop() {
       if(potValue < 950) potValue = 950;
     }
 
-    ESC1.writeMicroseconds(pwm1 + r1);
-    ESC2.writeMicroseconds(pwm2 + r2);
-    ESC3.writeMicroseconds(pwm3 + r3);
-    ESC4.writeMicroseconds(pwm4 + r4);
+//    ESC1.writeMicroseconds(pwm1 + r1);
+//    ESC2.writeMicroseconds(pwm2 + r2);
+//    ESC3.writeMicroseconds(pwm3 + r3);
+//    ESC4.writeMicroseconds(pwm4 + r4);
+
+    ESC1.writeMicroseconds(potValue);
+    ESC2.writeMicroseconds(potValue);
+    ESC3.writeMicroseconds(potValue);
+    ESC4.writeMicroseconds(potValue);
 
     voltageSensor = analogRead(A0);
     voltage = voltageSensor / 1024 * vcc * factor * 100 + 5;
