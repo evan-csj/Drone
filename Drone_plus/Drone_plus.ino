@@ -12,15 +12,15 @@
 #endif
 
 #include <Servo.h>
-String s = "";
-bool stopFlag = false;
-int potValue = 950;
-char command;
-String ss= "";
+#include <Wire.h>
+
+Servo ESC1, ESC2, ESC3, ESC4;
 float pwm1 = 0, pwm2 = 0, pwm3 = 0, pwm4 = 0;
-float Crotor = 1;
-int r1 = 0, r2 = 6, r3 = 7, r4 = 4;
-int startFlag = 0;
+int pwm = 950;
+int r1 = 0, r2 = 6, r3 = 0, r4 = 4;
+char command;
+bool stopFlag = false;
+float Crotor;
 float voltageSensor, voltage;
 const float factor = 11.87/2.36;
 const float vcc = 5.13;
@@ -40,8 +40,6 @@ float yaw_pid;
 float pitch_pid;
 float roll_pid;
 float z_pid;
-
-Servo ESC1, ESC2, ESC3, ESC4; //Name the Servo
 
 // class default I2C address is 0x68
 // specific I2C addresses may be passed as a parameter here
@@ -89,8 +87,6 @@ float K = 0;
 float Ti = 0;
 float Td = 0;
 
-float scale = 1;
-
 float KpRoll = K;
 float KiRoll = 0;
 float KdRoll = K*Td;
@@ -99,22 +95,17 @@ float KdRoll = K*Td;
 //float KiRoll = 0.04;
 //float KdRoll = 18;
 
-float KpPitch = KpRoll * scale;
-float KiPitch = KiRoll * scale;
-float KdPitch = KdRoll * scale;
+float KpPitch = KpRoll;
+float KiPitch = KiRoll;
+float KdPitch = KdRoll;
 
 float KpYaw = 0;
 float KiYaw = 0;
 float KdYaw = 0;
 
-//float Kp[3] = {0, KpPitch, KpRoll};    // P coefficients in that order : Yaw, Pitch, Roll
-//float Ki[3] = {0, KiPitch, KiRoll};    // I coefficients in that order : Yaw, Pitch, Roll
-//float Kd[3] = {0, KdPitch, KdRoll};    // D coefficients in that order : Yaw, Pitch, Roll
-
 unsigned long StartTime;
 unsigned long CurrentTime;
 float dt = 0.009;
-float testTime = 10;
 
 // packet structure for InvenSense teapot demo
 uint8_t teapotPacket[14] = { '$', 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x00, '\r', '\n' };
@@ -207,16 +198,16 @@ void loop() {
          command = Serial3.read();
          switch(command){
           case 'A':
-            if(potValue < 1200) potValue += 50;
-            else if(potValue < 1450) potValue += 10;
-            else potValue += 1;
+            if(pwm < 1200) pwm += 50;
+            else if(pwm < 1450) pwm += 10;
+            else pwm += 1;
             stopFlag = false;
             break;
           case 'V':
-            if(potValue < 1000) potValue = 950;
-            else if(potValue <= 1200) potValue -= 50;
-            else if(potValue <= 1450) potValue -= 10;
-            else potValue -= 1;
+            if(pwm < 1000) pwm = 950;
+            else if(pwm <= 1200) pwm -= 50;
+            else if(pwm <= 1450) pwm -= 10;
+            else pwm -= 1;
             break;
           case 'C':
             setPoints[ROLL] = 0;
@@ -236,12 +227,12 @@ void loop() {
           case 41: r4++; break;
           case 40: r4--; break;
           case 'P': 
-            K += 10; PIDUpdate(); break;
+            K += 1; PIDUpdate(); break;
           case 'I': Ti += 10; PIDUpdate(); break;
           case 'D': Td += 0.1; PIDUpdate(); break;
           case 'p': 
             if(K > 0){
-              K -= 10;
+              K -= 1;
               PIDUpdate(); 
             }
             break;
@@ -257,12 +248,12 @@ void loop() {
 
      // Rotor Protection
      if(abs(ypr[PITCH]) + abs(ypr[ROLL]) > 0.9){
-      potValue = 950;
+      pwm = 950;
      }
      
-     if(potValue > 950 && stopFlag){
-      potValue -= 1;
-      if(potValue < 950) potValue = 950;
+     if(pwm > 950 && stopFlag){
+      pwm -= 1;
+      if(pwm < 950) pwm = 950;
      }
 
     ESC1.writeMicroseconds(pwm1 + r1);
@@ -275,10 +266,10 @@ void loop() {
 //    ESC3.writeMicroseconds(0);
     ESC4.writeMicroseconds(0);
 
-//    ESC1.writeMicroseconds(potValue + r1);
-//    ESC2.writeMicroseconds(potValue + r2);
-//    ESC3.writeMicroseconds(potValue + r3);
-//    ESC4.writeMicroseconds(potValue + r4);
+//    ESC1.writeMicroseconds(pwm + r1);
+//    ESC2.writeMicroseconds(pwm + r2);
+//    ESC3.writeMicroseconds(pwm + r3);
+//    ESC4.writeMicroseconds(pwm + r4);
 
     voltageSensor = analogRead(A0);
     voltage = voltageSensor / 1024 * vcc * factor * 100 + 5;
@@ -294,13 +285,6 @@ void loop() {
     Serial3.print("R: ");
     Serial3.println(ypr[ROLL] * 180/M_PI);
 
-//    Serial3.print("YPID: ");
-//    Serial3.println(yaw_pid);
-//    Serial3.print("PPID: ");
-//    Serial3.println(pitch_pid);
-//    Serial3.print("RPID: ");
-//    Serial3.println(roll_pid);
-
     Serial3.print("R1234: ");
     Serial3.print(r1);
     Serial3.print(" ");
@@ -311,27 +295,22 @@ void loop() {
     Serial3.println(r4);
 
     Serial3.print("PID: ");
-    Serial3.print(K);
+    Serial3.print(KpRoll);
     Serial3.print(" ");
-    Serial3.print(Ti);
+    Serial3.print(KiRoll);
     Serial3.print(" ");
-    Serial3.println(Td);
+    Serial3.println(KdRoll);
     
     Serial3.print("PWM: ");
-    Serial3.println(potValue);
-//    Serial3.println(pwm1);
-//    Serial3.println(pwm2);
-//    Serial3.println(pwm3);
-//    Serial3.println(pwm4);
+    Serial3.println(pwm);
 
     Serial3.print("V: ");
     Serial3.println(voltage/100);
-//    Serial3.println(Crotor);
 
     Serial3.print("Loop time: ");
     Serial3.println(micros() - StartTime);
     Serial3.println('~');
-    while((micros() - StartTime) < (dt*1000000)){}
+//    while((micros() - StartTime) < (dt*1000000)){}
 }
 
 void YPR() {
@@ -341,7 +320,6 @@ void YPR() {
     if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet 
         #ifdef OUTPUT_READABLE_YAWPITCHROLL
             // display Euler angles in degrees
-//            mpu.dmpGetGyro(&gyro, fifoBuffer);
             mpu.dmpGetQuaternion(&q, fifoBuffer);
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
@@ -386,10 +364,10 @@ void YPRError() {
 }
 
 void PIDController() {
-    Crotor    = 0.0058*potValue - 3.9 + 0.16*(voltage - 1110)/100;
-    Crotor    = minMax(Crotor, 3, 4);
-//    Crotor    = 1;
-    thrust    = Crotor*potValue;
+//    Crotor    = 0.0058*pwm - 3.9 + 0.16*(voltage - 1110)/100;
+//    Crotor    = minMax(Crotor, 3, 4);
+    Crotor    = 1;
+    thrust    = Crotor*pwm;
     yaw_pid   = 0;
     pitch_pid = 0;
     roll_pid  = 0;
@@ -402,13 +380,9 @@ void PIDController() {
 //    pwm4 = thrust;
 
     // Do not calculate anything if throttle is 0
-    if (thrust >= 1000) {
+    if (thrust >= 950) {
         // PID = e.Kp + ∫e.Ki + Δe.Kd
-//        yaw_pid   = (errors[YAW]   * KpYaw)   + (iErrors[YAW]   * KiYaw)   + (dErrors[YAW]   * KdYaw);
-//        pitch_pid = (errors[PITCH] * KpPitch) + (iErrors[PITCH] * KiPitch) + (dErrors[PITCH] * KdPitch);
-//        roll_pid  = (errors[ROLL]  * KpRoll)  + (iErrors[ROLL]  * KiRoll)  + (dErrors[ROLL]  * KdRoll);
-
-        yaw_pid   = (errors[YAW]   * KpYaw)   + (iErrors[YAW]   * KiYaw)   * dt + (dErrors[YAW]   * KdYaw)   /dt;
+//        yaw_pid   = (errors[YAW]   * KpYaw)   + (iErrors[YAW]   * KiYaw)   * dt + (dErrors[YAW]   * KdYaw)   /dt;
         pitch_pid = (errors[PITCH] * KpPitch) + (iErrors[PITCH] * KiPitch) * dt + (dErrors[PITCH] * KdPitch) /dt;
         roll_pid  = (errors[ROLL]  * KpRoll)  + (iErrors[ROLL]  * KiRoll)  * dt + (dErrors[ROLL]  * KdRoll)  /dt;
 
@@ -418,15 +392,10 @@ void PIDController() {
 //        roll_pid  = minMax(roll_pid, -400, 400);
 
         // Calculate pulse duration for each ESC
-//        pwm1 = thrust + roll_pid + pitch_pid - yaw_pid;
-//        pwm2 = thrust - roll_pid + pitch_pid + yaw_pid;
-//        pwm3 = thrust - roll_pid - pitch_pid - yaw_pid;
-//        pwm4 = thrust + roll_pid - pitch_pid + yaw_pid;
-
-        pwm1 = 0.5*sqrt( - 2*pitch_pid + yaw_pid + z_pid)/Crotor;
-        pwm2 = 0.5*sqrt( - 2*roll_pid  - yaw_pid + z_pid)/Crotor;
-        pwm3 = 0.5*sqrt( + 2*pitch_pid + yaw_pid + z_pid)/Crotor;
-        pwm4 = 0.5*sqrt( + 2*roll_pid  - yaw_pid + z_pid)/Crotor;
+        pwm1 = - 2*pitch_pid + yaw_pid + thrust;
+        pwm2 = - 2*roll_pid  - yaw_pid + thrust;
+        pwm3 = + 2*pitch_pid + yaw_pid + thrust;
+        pwm4 = + 2*roll_pid  - yaw_pid + thrust;
 
 //        pwm1 = 0.5*sqrt( + roll_pid + pitch_pid - yaw_pid + z_pid);
 //        pwm2 = 0.5*sqrt( - roll_pid + pitch_pid + yaw_pid + z_pid);
@@ -445,9 +414,9 @@ void PIDUpdate(){
   KiRoll = 0;
   KdRoll = K*Td;
   
-  KpPitch = KpRoll*scale;
-  KiPitch = KiRoll*scale;
-  KdPitch = KdRoll*scale;
+  KpPitch = KpRoll;
+  KiPitch = KiRoll;
+  KdPitch = KdRoll;
   return 0;
 }
 

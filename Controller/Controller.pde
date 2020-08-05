@@ -24,7 +24,7 @@ void setup() {
    // Open the port that the Wiring board is connected to (in this case 1
    // which is the second open port in the array)
    // Make sure to open the port at the same speed Wiring is using (9600bps)
-   if(Serial.list()[0].equals("COM1")){
+   if(Serial.list()[0].equals("COM3")){
      port = new Serial(this, Serial.list()[3], 115200);
    }else{
      port = new Serial(this, Serial.list()[2], 115200);
