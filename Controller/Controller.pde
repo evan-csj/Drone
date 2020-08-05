@@ -8,12 +8,12 @@ RectButton r1u, r1d, r2u, r2d, r3u, r3d, r4u, r4d, pgu, igu, dgu, pgd, igd, dgd;
 boolean locked = false;
 String string = "";
 PFont font;
-int size = 200, xsize = size, ysize = xsize/2;
+int size = 120, xsize = size, ysize = xsize/2;
 int space = size/10;
 
 void setup() {
    //set up window
-   size(1800, 1000);
+   size(1000, 800);
    font = createFont("FRADM.TTF", size*0.3);
    textFont(font);
    bg = color(224, 224, 224);
@@ -116,7 +116,7 @@ void draw() {
    
    fill(47, 47, 47);
    textAlign(LEFT, TOP);
-   text(string, space*5 + size*4, 0, size*4, space*5 + size*4);
+   text(string, space*5 + size*4, 0, size*4, space*6 + size*5);
    textAlign(CENTER, CENTER);
    text("UP", space, space*2 + size, size, size);
    text("DOWN", space, space*3 + size*2, size, size);

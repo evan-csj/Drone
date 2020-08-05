@@ -356,10 +356,10 @@ void YPR() {
 }
 
 void YPRError() {
-    errors[YAW]   = setPoints[YAW] - ypr[YAW];
+    errors[YAW]   = setPoints[YAW]   - ypr[YAW];
     errors[PITCH] = setPoints[PITCH] - ypr[PITCH];
-    errors[ROLL]  = setPoints[ROLL] - ypr[ROLL];
-//
+    errors[ROLL]  = setPoints[ROLL]  - ypr[ROLL];
+
 //    errors[YAW]   = ypr[YAW]   - setPoints[YAW];
 //    errors[PITCH] = ypr[PITCH] - setPoints[PITCH];
 //    errors[ROLL]  = ypr[ROLL]  - setPoints[ROLL];
@@ -376,9 +376,9 @@ void YPRError() {
     dErrors[PITCH] = errors[PITCH] - preErrors[PITCH];
     dErrors[ROLL]  = errors[ROLL]  - preErrors[ROLL];
 
-    prepreErrors[YAW]   = preErrors[YAW];
-    prepreErrors[PITCH] = preErrors[PITCH];
-    prepreErrors[ROLL]  = preErrors[ROLL];
+//    prepreErrors[YAW]   = preErrors[YAW];
+//    prepreErrors[PITCH] = preErrors[PITCH];
+//    prepreErrors[ROLL]  = preErrors[ROLL];
 
     preErrors[YAW]   = errors[YAW];
     preErrors[PITCH] = errors[PITCH];
@@ -412,16 +412,6 @@ void PIDController() {
         pitch_pid = (errors[PITCH] * KpPitch) + (iErrors[PITCH] * KiPitch) * dt + (dErrors[PITCH] * KdPitch) /dt;
         roll_pid  = (errors[ROLL]  * KpRoll)  + (iErrors[ROLL]  * KiRoll)  * dt + (dErrors[ROLL]  * KdRoll)  /dt;
 
-        // Feedback Linearization
-//        yaw_pid   = (errors[YAW]   * KpYaw)   + (iErrors[YAW]   * KiYaw)   * dt + (dErrors[YAW]   * KdYaw)   /dt - (Ixx - Iyy)/k   * (dErrors[PITCH] / dt) * (dErrors[ROLL] / dt);
-//        pitch_pid = (errors[PITCH] * KpPitch) + (iErrors[PITCH] * KiPitch) * dt + (dErrors[PITCH] * KdPitch) /dt - (Izz - Ixx)/b/L * (dErrors[ROLL]  / dt) * (dErrors[YAW]  / dt);
-//        roll_pid  = (errors[ROLL]  * KpRoll)  + (iErrors[ROLL]  * KiRoll)  * dt + (dErrors[ROLL]  * KdRoll)  /dt - (Iyy - Izz)/b/L * (dErrors[PITCH] / dt) * (dErrors[YAW]  / dt);
-
-        // Discrete Time
-//       yaw_pid   = yaw_pid   + KpYaw   * (errors[YAW]   - preErrors[YAW])   + KiYaw   * dt * errors[YAW]   + KdYaw   * (errors[YAW]   - 2*preErrors[YAW]   + prepreErrors[YAW])   /dt;
-//       pitch_pid = pitch_pid + KpPitch * (errors[PITCH] - preErrors[PITCH]) + KiPitch * dt * errors[PITCH] + KdPitch * (errors[PITCH] - 2*preErrors[PITCH] + prepreErrors[PITCH]) /dt;
-//       roll_pid  = roll_pid  + KpRoll  * (errors[ROLL]  - preErrors[ROLL])  + KiRoll  * dt * errors[ROLL]  + KdRoll  * (errors[ROLL]  - 2*preErrors[ROLL]  + prepreErrors[ROLL])  /dt;
-
         // Keep values within acceptable range. TODO export hard-coded values in variables/const
 //        yaw_pid   = minMax(yaw_pid, -400, 400);
 //        pitch_pid = minMax(pitch_pid, -400, 400);
@@ -433,31 +423,16 @@ void PIDController() {
 //        pwm3 = thrust - roll_pid - pitch_pid - yaw_pid;
 //        pwm4 = thrust + roll_pid - pitch_pid + yaw_pid;
 
-        pwm1 = 0.5*sqrt( + roll_pid - pitch_pid + yaw_pid + z_pid)/Crotor;
-        pwm2 = 0.5*sqrt( - roll_pid - pitch_pid - yaw_pid + z_pid)/Crotor;
-        pwm3 = 0.5*sqrt( - roll_pid + pitch_pid + yaw_pid + z_pid)/Crotor;
-        pwm4 = 0.5*sqrt( + roll_pid + pitch_pid - yaw_pid + z_pid)/Crotor;
+        pwm1 = 0.5*sqrt( - 2*pitch_pid + yaw_pid + z_pid)/Crotor;
+        pwm2 = 0.5*sqrt( - 2*roll_pid  - yaw_pid + z_pid)/Crotor;
+        pwm3 = 0.5*sqrt( + 2*pitch_pid + yaw_pid + z_pid)/Crotor;
+        pwm4 = 0.5*sqrt( + 2*roll_pid  - yaw_pid + z_pid)/Crotor;
 
 //        pwm1 = 0.5*sqrt( + roll_pid + pitch_pid - yaw_pid + z_pid);
 //        pwm2 = 0.5*sqrt( - roll_pid + pitch_pid + yaw_pid + z_pid);
 //        pwm3 = 0.5*sqrt( - roll_pid - pitch_pid - yaw_pid + z_pid);
 //        pwm4 = 0.5*sqrt( + roll_pid - pitch_pid + yaw_pid + z_pid);
     }
-
-    // Prevent out-of-range-values
-//    if (voltage < 1260 && voltage > 800){            //Is the battery connected?
-//      pwm1 += pwm1 * ((1240 - voltage)/(float)145/(16*voltage - 192.6)); //Compensate the esc-1 pulse for voltage drop.
-//      pwm2 += pwm2 * ((1240 - voltage)/(float)145/(16*voltage - 192.6)); //Compensate the esc-2 pulse for voltage drop.
-//      pwm3 += pwm3 * ((1240 - voltage)/(float)145/(16*voltage - 192.6)); //Compensate the esc-3 pulse for voltage drop.
-//      pwm4 += pwm4 * ((1240 - voltage)/(float)145/(16*voltage - 192.6)); //Compensate the esc-4 pulse for voltage drop.
-//    } 
-
-//    if (voltage < 1260 && voltage > 800){            //Is the battery connected?
-//      pwm1 += pwm1 * ((1260 - voltage)/(float)3500); //Compensate the esc-1 pulse for voltage drop.
-//      pwm2 += pwm2 * ((1260 - voltage)/(float)3500); //Compensate the esc-2 pulse for voltage drop.
-//      pwm3 += pwm3 * ((1260 - voltage)/(float)3500); //Compensate the esc-3 pulse for voltage drop.
-//      pwm4 += pwm4 * ((1260 - voltage)/(float)3500); //Compensate the esc-4 pulse for voltage drop.
-//    } 
     
     pwm1 = minMax(pwm1, 950, 2000);
     pwm2 = minMax(pwm2, 950, 2000);

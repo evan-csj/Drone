@@ -7,9 +7,9 @@ m = 1.1; % mass of the drone
 b = 1.84E-7; % thrust coefficient
 k = 3.24E-8; % air drag coefficient
 L = 0.160; % distance from motor to center line
-Ixx = 0.0119; % moment of inertia
-Iyy = 0.0119;
-Izz = 0.0225;
+Ixx = 0.0116; % moment of inertia
+Iyy = 0.0225;
+Izz = 0.0121;
 Tf = 0;
 Ts = 0.007;
 
@@ -28,34 +28,34 @@ B(5,2) = L*b/Iyy;
 B(6,3) = 1*k/Izz;
 
 sys = ss(A,B,C,0);
-% sysd = c2d(sys,Ts);
+sysd = c2d(sys,Ts);
 
 Control = rank(ctrb(sys));
 Observe = rank(obsv(sys));
 
-drone = tf(sys);
+drone = tf(sysd);
 
-K = 2700;
-Ti = 17.288;
-Td = 30;
+K = 90034;
+Ti = 17;
+Td = 143;
 
 KpRoll = K;
-KiRoll = 0;
+KiRoll = K/Ti;
 KdRoll = K*Td;
 
-scale = 1;
+scale = 2;
 
 KpPitch = KpRoll*scale;
 KiPitch = KiRoll*scale;
 KdPitch = KdRoll*scale;
 
-KpYaw = 64858;
-KiYaw = 0;
-KdYaw = 369033;
+KpYaw = 13069;
+KiYaw = 114;
+KdYaw = 373389;
 
-pidRoll = pid(KpRoll,KiRoll,KdRoll);
-pidPitch = pid(KpPitch,KiPitch,KdPitch);
-pidYaw = pid(KpYaw,KiYaw,KdYaw);
+pidRoll = pid(KpRoll,KiRoll,KdRoll,Tf,Ts);
+pidPitch = pid(KpPitch,KiPitch,KdPitch,Tf,Ts);
+pidYaw = pid(KpYaw,KiYaw,KdYaw,Tf,Ts);
 
 tfRoll = feedback(pidRoll*drone(1,1),1);
 tfPitch = feedback(pidPitch*drone(2,2),1);
