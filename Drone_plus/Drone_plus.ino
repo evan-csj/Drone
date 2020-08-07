@@ -12,12 +12,11 @@
 #endif
 
 #include <Servo.h>
-#include <Wire.h>
 
 Servo ESC1, ESC2, ESC3, ESC4;
 float pwm1 = 0, pwm2 = 0, pwm3 = 0, pwm4 = 0;
 int pwm = 950;
-int r1 = 0, r2 = 6, r3 = 0, r4 = 4;
+int r1 = 15, r2 = 6, r3 = -15, r4 = 4;
 char command;
 bool stopFlag = false;
 float Crotor;
@@ -25,9 +24,9 @@ float voltageSensor, voltage;
 const float factor = 11.87/2.36;
 const float vcc = 5.13;
 
-float Ixx = 0.0116;
-float Iyy = 0.0225;
-float Izz = 0.0121;
+float Ixx = 0.0118;
+float Iyy = 0.0118;
+float Izz = 0.0225;
 
 float m = 1.1;
 float g = 9.8;
@@ -81,7 +80,6 @@ float errors[3];
 float dErrors[3] = {0, 0, 0};
 float iErrors[3] = {0, 0, 0};
 float preErrors[3] = {0, 0, 0};
-float prepreErrors[3] = {0, 0, 0};
 
 float K = 0;
 float Ti = 0;
@@ -137,7 +135,7 @@ void setup() {
     #endif
 
     // initialize Serial3 communication
-    // (115200 chosen because it is required for Teapot Demo output, but it's
+    // (9600 chosen because it is required for Teapot Demo output, but it's
     // really up to you depending on your project)
     while (!Serial3); // wait for Leonardo enumeration, others continue immediately
 
@@ -152,10 +150,10 @@ void setup() {
     devStatus = mpu.dmpInitialize();
 
     // supply your own gyro offsets here, scaled for min sensitivity
-    mpu.setXGyroOffset(-65);
-    mpu.setYGyroOffset(60);
-    mpu.setZGyroOffset(-145);
-    mpu.setZAccelOffset(1514);
+    mpu.setXGyroOffset(73);
+    mpu.setYGyroOffset(-63);
+    mpu.setZGyroOffset(-25);
+    mpu.setZAccelOffset(1506);
 
     // make sure it worked (returns 0 if so)
     if (devStatus == 0) {
@@ -182,8 +180,8 @@ void setup() {
 
     ESC1.attach(8,1000,2000); // (pin, min pulse width, max pulse width in microseconds)
     ESC2.attach(9,1000,2000); // (pin, min pulse width, max pulse width in microseconds)
-    ESC3.attach(10,1000,2000); // (pin, min pulse width, max pulse width in microseconds)
-    ESC4.attach(11,1000,2000); // (pin, min pulse width, max pulse width in microseconds)
+    ESC3.attach(11,1000,2000); // (pin, min pulse width, max pulse width in microseconds)
+    ESC4.attach(10,1000,2000); // (pin, min pulse width, max pulse width in microseconds)
 }
 
 // ================================================================

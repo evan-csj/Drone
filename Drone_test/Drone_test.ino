@@ -31,41 +31,33 @@ float pid_p = 0;
 float pid_i = 0;
 float pid_d = 0;
 
-double kp = 3.55;
-double ki = 0.005;
-double kd = 2.05;
+double Kp = 0;
+double Ki = 0;
+double Kd = 0;
 
 double throttle;
 char command;
 
 void setup() {
+  Serial.begin(9600);
+  Serial3.begin(115200);
   Wire.begin();
   Wire.beginTransmission(0x68);
   Wire.write(0x6B);
   Wire.write(0);
   Wire.endTransmission(true);
-  Serial.begin(9600);
-  Serial3.begin(115200);
   
   ESC1.attach( 8,1000,2000);
   ESC2.attach( 9,1000,2000);
-  ESC3.attach(10,1000,2000);
-  ESC4.attach(11,1000,2000);
+  ESC3.attach(11,1000,2000);
+  ESC4.attach(10,1000,2000);
 
   time = micros();
   
-  ESC1.writeMicroseconds(pwm);
-  ESC2.writeMicroseconds(pwm);
-  ESC3.writeMicroseconds(pwm);
-  ESC4.writeMicroseconds(pwm);
-  delay(7000);
+//  delay(7000);
 }
 
 void loop() {
-  timePrev = time;
-  time = micros();
-  elapsedTime = (time - timePrev) / 1000000;
-
   if( Serial3.available() ) // if data is available to read
      {
          command = Serial3.read();
@@ -82,15 +74,7 @@ void loop() {
             else if(pwm <= 1450) pwm -= 10;
             else pwm -= 1;
             break;
-//          case 'C':
-//            setPoints[ROLL] = 0;
-//            setPoints[PITCH] = 0;
-//            break;
           case 'S': stopFlag = true; break;
-//          case 'F': setPoints[PITCH] += 10; break;
-//          case 'B': setPoints[PITCH] -= 10; break;
-//          case 'L': setPoints[ROLL] += 10; break;
-//          case 'R': setPoints[ROLL] -= 10; break;
           case 11: r1++; break;
           case 10: r1--; break;
           case 21: r2++; break;
@@ -99,23 +83,25 @@ void loop() {
           case 30: r3--; break;
           case 41: r4++; break;
           case 40: r4--; break;
-//          case 'P': 
-//            K += 10; PIDUpdate(); break;
-//          case 'I': Ti += 10; PIDUpdate(); break;
-//          case 'D': Td += 0.1; PIDUpdate(); break;
-//          case 'p': 
-//            if(K > 0){
-//              K -= 10;
-//              PIDUpdate(); 
-//            }
-//            break;
-//          case 'i': Ti -= 10; PIDUpdate(); break;
-//          case 'd':
-//            if(Td > 0){
-//              Td -= 0.1; 
-//              PIDUpdate(); 
-//            }
-//            break;  
+          case 'P': 
+            Kp += 1; break;
+          case 'I': Ki += 1; break;
+          case 'D': Kd += 0.1; break;
+          case 'p': 
+            if(Kp > 0){
+              Kp -= 1;
+            }
+            break;
+          case 'i': 
+            if(Ki > 0){
+              Ki -= 1;
+            }
+            break;
+          case 'd':
+            if(Kd > 0){
+              Kd -= 0.1; 
+            }
+            break;  
          }
      }
 
@@ -123,10 +109,20 @@ void loop() {
     pwm -= 1;
     if(pwm < 950) pwm = 950;
   }
+
+  timePrev = time;
+  time = micros();
+  elapsedTime = (time - timePrev) / 1000000;
      
-  ESC1.writeMicroseconds(pwm1);
-  ESC3.writeMicroseconds(pwm3);
+  ESC1.writeMicroseconds(pwm1 + r1);
+//  ESC2.writeMicroseconds(pwm2 + r2);
+  ESC3.writeMicroseconds(pwm3 + r3);
+//  ESC4.writeMicroseconds(pwm4 + r4);
   
+//  ESC1.writeMicroseconds(0);
+  ESC2.writeMicroseconds(0);
+//  ESC3.writeMicroseconds(0);
+  ESC4.writeMicroseconds(0);
   
   Wire.beginTransmission(0x68);
   Wire.write(0x3B);
@@ -160,24 +156,22 @@ void loop() {
 
   error[PITCH] = Total_angle[PITCH] - setPoints[PITCH];
   
-  pid_p = kp*error[PITCH];
+  pid_p = Kp*error[PITCH];
   
   if(-3 < error[PITCH] < 3){
-    pid_i = pid_i + ki*error[PITCH];
+    pid_i = pid_i + Ki*error[PITCH];
   }
 
-  pid_d = kd*((error[PITCH] - prevError[PITCH])/elapsedTime);
+  pid_d = Kd*((error[PITCH] - prevError[PITCH])/elapsedTime);
 
   PID = pid_p + pid_i + pid_d;
   PID = minMax(PID, -1000, 1000);
 
-  throttle = pwm;
+  pwm1 = pwm - PID;
+  pwm3 = pwm + PID;
 
-  pwm1 = throttle - PID;
-  pwm3 = throttle + PID;
-
-  pwm1 = minMax(pwm1, 1000, 2000);
-  pwm3 = minMax(pwm3, 1000, 2000);
+  pwm1 = minMax(pwm1, 950, 2000);
+  pwm3 = minMax(pwm3, 950, 2000);
 
   voltageSensor = analogRead(A0);
   voltage = voltageSensor / 1024 * vcc * factor * 100 + 5;
@@ -197,11 +191,20 @@ void loop() {
   Serial3.print(r3);
   Serial3.print(" ");
   Serial3.println(r4);
-    
+
+  Serial3.print("PID: ");
+  Serial3.print(Kp);
+  Serial3.print(" ");
+  Serial3.print(Ki);
+  Serial3.print(" ");
+  Serial3.println(Kd);
+  
   Serial3.print("PWM: ");
   Serial3.println(pwm);
   Serial3.println(pwm1);
+  Serial3.println(pwm2);
   Serial3.println(pwm3);
+  Serial3.println(pwm4);
   
   Serial3.print("V: ");
   Serial3.println(voltage/100);

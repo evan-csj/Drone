@@ -6,9 +6,9 @@ g = 9.8; % gravity
 m = 1.1; % mass of the drone
 b = 1.84E-7; % thrust coefficient
 k = 3.24E-8; % air drag coefficient
-L = 0.160; % distance from motor to center line
-Ixx = 0.0119; % moment of inertia
-Iyy = 0.0119;
+L = 0.225; % distance from motor to center line
+Ixx = 0.0118; % moment of inertia
+Iyy = 0.0118;
 Izz = 0.0225;
 Tf = 0;
 Ts = 0.007;
@@ -35,23 +35,17 @@ Observe = rank(obsv(sys));
 
 drone = tf(sys);
 
-K = 2700;
-Ti = 17.288;
-Td = 30;
+KpRoll = 159581;
+KiRoll = 5585;
+KdRoll = 1139747;
 
-KpRoll = K;
-KiRoll = 0;
-KdRoll = K*Td;
+KpPitch = KpRoll;
+KiPitch = KiRoll;
+KdPitch = KdRoll;
 
-scale = 1;
-
-KpPitch = KpRoll*scale;
-KiPitch = KiRoll*scale;
-KdPitch = KdRoll*scale;
-
-KpYaw = 64858;
-KiYaw = 0;
-KdYaw = 369033;
+KpYaw = 388809;
+KiYaw = 13610;
+KdYaw = 2776927;
 
 pidRoll = pid(KpRoll,KiRoll,KdRoll);
 pidPitch = pid(KpPitch,KiPitch,KdPitch);
