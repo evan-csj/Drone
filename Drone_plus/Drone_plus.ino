@@ -16,7 +16,7 @@
 Servo ESC1, ESC2, ESC3, ESC4;
 float pwm1 = 0, pwm2 = 0, pwm3 = 0, pwm4 = 0;
 int pwm = 950;
-int r1 = 15, r2 = 6, r3 = -15, r4 = 4;
+int r1 = 15, r2 = 6, r3 = -15, r4 = -6;
 char command;
 bool stopFlag = false;
 float Crotor;
@@ -81,21 +81,13 @@ float dErrors[3] = {0, 0, 0};
 float iErrors[3] = {0, 0, 0};
 float preErrors[3] = {0, 0, 0};
 
-float K = 0;
-float Ti = 0;
-float Td = 0;
+//float Kp = 0;
+//float Ki = 0;
+//float Kd = 0;
 
-float KpRoll = K;
-float KiRoll = 0;
-float KdRoll = K*Td;
-
-//float KpRoll = 1.3;
-//float KiRoll = 0.04;
-//float KdRoll = 18;
-
-float KpPitch = KpRoll;
-float KiPitch = KiRoll;
-float KdPitch = KdRoll;
+float Kp = 1.3;
+float Ki = 0;
+float Kd = 18;
 
 float KpYaw = 0;
 float KiYaw = 0;
@@ -103,7 +95,7 @@ float KdYaw = 0;
 
 unsigned long StartTime;
 unsigned long CurrentTime;
-float dt = 0.009;
+float dt = 1;
 
 // packet structure for InvenSense teapot demo
 uint8_t teapotPacket[14] = { '$', 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x00, '\r', '\n' };
@@ -196,14 +188,14 @@ void loop() {
          command = Serial3.read();
          switch(command){
           case 'A':
-            if(pwm < 1200) pwm += 50;
+            if(pwm < 1300) pwm += 50;
             else if(pwm < 1450) pwm += 10;
             else pwm += 1;
             stopFlag = false;
             break;
           case 'V':
             if(pwm < 1000) pwm = 950;
-            else if(pwm <= 1200) pwm -= 50;
+            else if(pwm <= 1300) pwm -= 50;
             else if(pwm <= 1450) pwm -= 10;
             else pwm -= 1;
             break;
@@ -224,28 +216,29 @@ void loop() {
           case 30: r3--; break;
           case 41: r4++; break;
           case 40: r4--; break;
-          case 'P': 
-            K += 1; PIDUpdate(); break;
-          case 'I': Ti += 10; PIDUpdate(); break;
-          case 'D': Td += 0.1; PIDUpdate(); break;
+          case 'P': Kp += 0.1; break;
+          case 'I': Ki += 0.005; break;
+          case 'D': Kd += 1; break;
           case 'p': 
-            if(K > 0){
-              K -= 1;
-              PIDUpdate(); 
+            if(Kp > 0){
+              Kp -= 0.1;
             }
             break;
-          case 'i': Ti -= 10; PIDUpdate(); break;
+          case 'i': 
+            if(Ki > 0){
+              Ki -= 0.005;
+            }
+            break;
           case 'd':
-            if(Td > 0){
-              Td -= 0.1; 
-              PIDUpdate(); 
+            if(Kd > 0){
+              Kd -= 1; 
             }
             break;  
          }
      }
 
      // Rotor Protection
-     if(abs(ypr[PITCH]) + abs(ypr[ROLL]) > 0.9){
+     if(abs(ypr[PITCH]) + abs(ypr[ROLL]) > 0.7){
       pwm = 950;
      }
      
@@ -254,20 +247,15 @@ void loop() {
       if(pwm < 950) pwm = 950;
      }
 
-    ESC1.writeMicroseconds(pwm1 + r1);
-//    ESC2.writeMicroseconds(pwm2 + r2);
-    ESC3.writeMicroseconds(pwm3 + r3);
-//    ESC4.writeMicroseconds(pwm4 + r4);
+//    ESC1.writeMicroseconds(pwm1 + r1);
+    ESC2.writeMicroseconds(pwm2 + r2);
+//    ESC3.writeMicroseconds(pwm3 + r3);
+    ESC4.writeMicroseconds(pwm4 + r4);
 
-//    ESC1.writeMicroseconds(0);
-    ESC2.writeMicroseconds(0);
-//    ESC3.writeMicroseconds(0);
-    ESC4.writeMicroseconds(0);
-
-//    ESC1.writeMicroseconds(pwm + r1);
-//    ESC2.writeMicroseconds(pwm + r2);
-//    ESC3.writeMicroseconds(pwm + r3);
-//    ESC4.writeMicroseconds(pwm + r4);
+    ESC1.writeMicroseconds(0);
+//    ESC2.writeMicroseconds(0);
+    ESC3.writeMicroseconds(0);
+//    ESC4.writeMicroseconds(0);
 
     voltageSensor = analogRead(A0);
     voltage = voltageSensor / 1024 * vcc * factor * 100 + 5;
@@ -276,38 +264,41 @@ void loop() {
     YPRError();
     PIDController();
     
-    Serial3.print("Y: ");
-    Serial3.println(ypr[YAW] * 180/M_PI);
-    Serial3.print("P: ");
-    Serial3.println(ypr[PITCH] * 180/M_PI);
-    Serial3.print("R: ");
-    Serial3.println(ypr[ROLL] * 180/M_PI);
-
-    Serial3.print("R1234: ");
-    Serial3.print(r1);
-    Serial3.print(" ");
-    Serial3.print(r2);
-    Serial3.print(" ");
-    Serial3.print(r3);
-    Serial3.print(" ");
-    Serial3.println(r4);
-
-    Serial3.print("PID: ");
-    Serial3.print(KpRoll);
-    Serial3.print(" ");
-    Serial3.print(KiRoll);
-    Serial3.print(" ");
-    Serial3.println(KdRoll);
+    Serial3.print(millis());
+    Serial3.print(' ');
     
-    Serial3.print("PWM: ");
-    Serial3.println(pwm);
+    Serial3.print(ypr[ROLL] * 180/M_PI);
+    Serial3.print(',');
+    Serial3.print(ypr[PITCH] * 180/M_PI);
+    Serial3.print(',');
+    Serial3.print(ypr[YAW] * 180/M_PI);
 
-    Serial3.print("V: ");
-    Serial3.println(voltage/100);
+    Serial3.print(' ');
+    Serial3.print(r1);
+    Serial3.print(',');
+    Serial3.print(r2);
+    Serial3.print(',');
+    Serial3.print(r3);
+    Serial3.print(',');
+    Serial3.print(r4);
 
-    Serial3.print("Loop time: ");
-    Serial3.println(micros() - StartTime);
-    Serial3.println('~');
+    Serial3.print(' ');
+    Serial3.print(Kp);
+    Serial3.print(',');
+    Serial3.print(Ki);
+    Serial3.print(',');
+    Serial3.print(Kd);
+    
+    Serial3.print(' ');
+    Serial3.print(pwm);
+
+    Serial3.print(' ');
+    Serial3.print(voltage/100);
+
+    Serial3.print(' ');
+    Serial3.print(micros() - StartTime);
+    Serial3.print(' ');
+    Serial3.print('~');
 //    while((micros() - StartTime) < (dt*1000000)){}
 }
 
@@ -319,10 +310,11 @@ void YPR() {
         #ifdef OUTPUT_READABLE_YAWPITCHROLL
             // display Euler angles in degrees
             mpu.dmpGetQuaternion(&q, fifoBuffer);
-            mpu.dmpGetGravity(&gravity, &q);
-            mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-            ypr[YAW] = -ypr[YAW];
+//            mpu.dmpGetGravity(&gravity, &q);
+//            mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+            mpu.dmpGetEuler(ypr, &q);
             ypr[ROLL] = -ypr[ROLL];
+            ypr[PITCH] = -ypr[PITCH];
         #endif
 
         // blink LED to indicate activity
@@ -335,26 +327,18 @@ void YPRError() {
     errors[YAW]   = setPoints[YAW]   - ypr[YAW];
     errors[PITCH] = setPoints[PITCH] - ypr[PITCH];
     errors[ROLL]  = setPoints[ROLL]  - ypr[ROLL];
-
-//    errors[YAW]   = ypr[YAW]   - setPoints[YAW];
-//    errors[PITCH] = ypr[PITCH] - setPoints[PITCH];
-//    errors[ROLL]  = ypr[ROLL]  - setPoints[ROLL];
     
     iErrors[YAW]   += errors[YAW];
     iErrors[PITCH] += errors[PITCH];
     iErrors[ROLL]  += errors[ROLL];
 
 //    iErrors[YAW]   = minMax(iErrors[YAW],   -400/KiYaw,   400/KiYaw);
-//    iErrors[PITCH] = minMax(iErrors[PITCH], -400/KiPitch, 400/KiPitch);
-//    iErrors[ROLL]  = minMax(iErrors[ROLL],  -400/KiRoll,  400/KiRoll);
+//    iErrors[PITCH] = minMax(iErrors[PITCH], -400/Ki, 400/Ki);
+//    iErrors[ROLL]  = minMax(iErrors[ROLL],  -400/Ki,  400/Ki);
 
     dErrors[YAW]   = errors[YAW]   - preErrors[YAW];
     dErrors[PITCH] = errors[PITCH] - preErrors[PITCH];
     dErrors[ROLL]  = errors[ROLL]  - preErrors[ROLL];
-
-//    prepreErrors[YAW]   = preErrors[YAW];
-//    prepreErrors[PITCH] = preErrors[PITCH];
-//    prepreErrors[ROLL]  = preErrors[ROLL];
 
     preErrors[YAW]   = errors[YAW];
     preErrors[PITCH] = errors[PITCH];
@@ -381,8 +365,8 @@ void PIDController() {
     if (thrust >= 950) {
         // PID = e.Kp + ∫e.Ki + Δe.Kd
 //        yaw_pid   = (errors[YAW]   * KpYaw)   + (iErrors[YAW]   * KiYaw)   * dt + (dErrors[YAW]   * KdYaw)   /dt;
-        pitch_pid = (errors[PITCH] * KpPitch) + (iErrors[PITCH] * KiPitch) * dt + (dErrors[PITCH] * KdPitch) /dt;
-        roll_pid  = (errors[ROLL]  * KpRoll)  + (iErrors[ROLL]  * KiRoll)  * dt + (dErrors[ROLL]  * KdRoll)  /dt;
+        pitch_pid = (errors[PITCH] * Kp) + (iErrors[PITCH] * Ki) * dt + (dErrors[PITCH] * Kd) /dt;
+        roll_pid  = (errors[ROLL]  * Kp)  + (iErrors[ROLL]  * Ki)  * dt + (dErrors[ROLL]  * Kd)  /dt;
 
         // Keep values within acceptable range. TODO export hard-coded values in variables/const
 //        yaw_pid   = minMax(yaw_pid, -400, 400);
@@ -407,23 +391,11 @@ void PIDController() {
     pwm4 = minMax(pwm4, 950, 2000);
 }
 
-void PIDUpdate(){
-  KpRoll = K;
-  KiRoll = 0;
-  KdRoll = K*Td;
-  
-  KpPitch = KpRoll;
-  KiPitch = KiRoll;
-  KdPitch = KdRoll;
-  return 0;
-}
-
 float minMax(float value, float min, float max) {
     if (value > max) {
         value = max;
     } else if (value < min) {
         value = min;
     }
-
     return value;
 }

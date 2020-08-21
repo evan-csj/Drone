@@ -35,17 +35,17 @@ Observe = rank(obsv(sys));
 
 drone = tf(sys);
 
-KpRoll = 159581;
-KiRoll = 5585;
-KdRoll = 1139747;
+KpRoll = 435140;
+KiRoll = 50400;
+KdRoll = 939207;
 
 KpPitch = KpRoll;
 KiPitch = KiRoll;
 KdPitch = KdRoll;
 
-KpYaw = 388809;
-KiYaw = 13610;
-KdYaw = 2776927;
+KpYaw = 1074342;
+KiYaw = 125265;
+KdYaw = 2303541;
 
 pidRoll = pid(KpRoll,KiRoll,KdRoll);
 pidPitch = pid(KpPitch,KiPitch,KdPitch);

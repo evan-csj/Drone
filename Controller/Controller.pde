@@ -7,9 +7,15 @@ SqButton up, down, left, right, forward, backward, center, stop;
 RectButton r1u, r1d, r2u, r2d, r3u, r3d, r4u, r4d, pgu, igu, dgu, pgd, igd, dgd;
 boolean locked = false;
 String string = "";
+String stringUpdate = "";
+String[] stringList;
+String[] lineList;
+boolean datalog = false;
 PFont font;
 int size = 120, xsize = size, ysize = xsize/2;
 int space = size/10;
+Table table;
+TableRow newRow;
 
 void setup() {
    //set up window
@@ -23,8 +29,8 @@ void setup() {
    println(Serial.list());
    // Open the port that the Wiring board is connected to (in this case 1
    // which is the second open port in the array)
-   // Make sure to open the port at the same speed Wiring is using (9600bps)
-   if(Serial.list()[0].equals("COM3")){
+   // Make sure to open the port at the same speed Wiring is using (115200bps)
+   if(Serial.list()[0].equals("COM1")){
      port = new Serial(this, Serial.list()[3], 115200);
    }else{
      port = new Serial(this, Serial.list()[2], 115200);
@@ -79,6 +85,12 @@ void setup() {
    pgd = new RectButton(space*2 + size, space*4 + size*3 + ysize, xsize, ysize, blue, blueH);
    igd = new RectButton(space*3 + size*2, space*4 + size*3 + ysize, xsize, ysize, blue, blueH);
    dgd = new RectButton(space*4 + size*3, space*4 + size*3 + ysize, xsize, ysize, blue, blueH);
+   
+   table = new Table();
+   table.addColumn("Time");
+   table.addColumn("Roll");
+   table.addColumn("Pitch");
+   table.addColumn("Yaw");
 }
  
 void draw() {
@@ -116,7 +128,7 @@ void draw() {
    
    fill(47, 47, 47);
    textAlign(LEFT, TOP);
-   text(string, space*5 + size*4, 0, size*4, space*6 + size*5);
+   text(stringUpdate, space*5 + size*4, space, size*4, space*6 + size*5);
    textAlign(CENTER, CENTER);
    text("UP", space, space*2 + size, size, size);
    text("DOWN", space, space*3 + size*2, size, size);
@@ -212,6 +224,42 @@ void update(int x, int y) {
 
 void serialEvent(Serial port) {
   string = port.readString();
+  if(!datalog){
+    datalog = true;
+  }else{
+    stringUpdate = "";
+    stringList = split(string, " ");
+    stringUpdate += "Time: ";
+    stringUpdate += stringList[0];
+    stringUpdate += " ms\n";
+    stringUpdate += "RPY: ";
+    stringUpdate += stringList[1];
+    stringUpdate += " deg\n";
+    stringUpdate += "R1234: ";
+    stringUpdate += stringList[2];
+    stringUpdate += "\n";
+    stringUpdate += "PID: ";
+    stringUpdate += stringList[3];
+    stringUpdate += "\n";
+    stringUpdate += "PWM: ";
+    stringUpdate += stringList[4];
+    stringUpdate += "\n";
+    stringUpdate += "Voltage: ";
+    stringUpdate += stringList[5];
+    stringUpdate += " V\n";
+    stringUpdate += "Loop Time: ";
+    stringUpdate += stringList[6];
+    stringUpdate += " us\n";
+    
+    newRow = table.addRow();
+    newRow.setString("Time", stringList[0]);
+    lineList = split(stringList[1], ',');
+    newRow.setString("Roll", lineList[0]);
+    newRow.setString("Pitch", lineList[1]);
+    newRow.setString("Yaw", lineList[2]);
+    newRow.setString("Voltage", stringList[5]);
+  }
+  
   if(string == null){
     println("null serial string");
     string = "";
@@ -319,4 +367,12 @@ boolean overRect(int x, int y, int width, int heiguht) {
    } else {
       return false;
    }
+}
+
+void keyPressed()
+{
+  //save as a table in csv format(data/table - data folder name table)
+  saveTable(table, "data/TestResult.csv");
+  port.stop();
+  exit();
 }
