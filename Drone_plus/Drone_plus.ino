@@ -24,6 +24,11 @@ float voltageSensor, voltage;
 const float factor = 11.87/2.36;
 const float vcc = 5.13;
 
+const int trigPin = 6;
+const int echoPin = 7;
+long duration;
+int distance, distanceLast;
+
 float Ixx = 0.0118;
 float Iyy = 0.0118;
 float Izz = 0.0225;
@@ -80,10 +85,6 @@ float errors[3];
 float dErrors[3] = {0, 0, 0};
 float iErrors[3] = {0, 0, 0};
 float preErrors[3] = {0, 0, 0};
-
-//float Kp = 0;
-//float Ki = 0;
-//float Kd = 0;
 
 float Kp = 1.3;
 float Ki = 0;
@@ -169,6 +170,8 @@ void setup() {
 
     // configure LED for output
     pinMode(LED_PIN, OUTPUT);
+    pinMode(trigPin, OUTPUT);
+    pinMode(echoPin, INPUT);
 
     ESC1.attach(8,1000,2000); // (pin, min pulse width, max pulse width in microseconds)
     ESC2.attach(9,1000,2000); // (pin, min pulse width, max pulse width in microseconds)
@@ -263,6 +266,7 @@ void loop() {
     YPR();
     YPRError();
     PIDController();
+    Altitude();
     
     Serial3.print(millis());
     Serial3.print(' ');
@@ -294,6 +298,9 @@ void loop() {
 
     Serial3.print(' ');
     Serial3.print(voltage/100);
+
+    Serial3.print(' ');
+    Serial3.print(distance);
 
     Serial3.print(' ');
     Serial3.print(micros() - StartTime);
@@ -389,6 +396,28 @@ void PIDController() {
     pwm2 = minMax(pwm2, 950, 2000);
     pwm3 = minMax(pwm3, 950, 2000);
     pwm4 = minMax(pwm4, 950, 2000);
+}
+
+void Altitude(){
+  // Clears the trigPin
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  
+  // Sets the trigPin on HIGH state for 10 micro seconds
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  
+  // Reads the echoPin, returns the sound wave travel time in microseconds
+  duration = pulseIn(echoPin, HIGH, 24000);
+
+  // Calculating the distance
+  distance = duration * 0.034/2;
+  
+  if(distance == 0){
+    distance = distanceLast;
+  }
+  distanceLast = distance;
 }
 
 float minMax(float value, float min, float max) {

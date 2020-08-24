@@ -17,7 +17,9 @@ Ts = 0.007;
 % U1 U2 U3
 A = zeros(6,6);
 B = zeros(6,3);
-C = eye(6);
+C = [1 0 0 0 0 0;
+     0 1 0 0 0 0;
+     0 0 1 0 0 0];
 
 A(1,4) = 1;
 A(2,5) = 1;
@@ -28,24 +30,24 @@ B(5,2) = L*b/Iyy;
 B(6,3) = 1*k/Izz;
 
 sys = ss(A,B,C,0);
-% sysd = c2d(sys,Ts);
+sysd = c2d(sys,Ts);
 
 Control = rank(ctrb(sys));
 Observe = rank(obsv(sys));
 
 drone = tf(sys);
 
-KpRoll = 435140;
-KiRoll = 50400;
-KdRoll = 939207;
+KpRoll = 6.5E6;
+KiRoll = 3.8E6;
+KdRoll = 2.8E6;
 
 KpPitch = KpRoll;
 KiPitch = KiRoll;
 KdPitch = KdRoll;
 
-KpYaw = 1074342;
-KiYaw = 125265;
-KdYaw = 2303541;
+KpYaw = 1.6E7;
+KiYaw = 9.2E6;
+KdYaw = 6.9E6;
 
 pidRoll = pid(KpRoll,KiRoll,KdRoll);
 pidPitch = pid(KpPitch,KiPitch,KdPitch);
@@ -58,3 +60,19 @@ tfYaw = feedback(pidYaw*drone(3,3),1);
 [numX,denX] = tfdata(drone(1,1),'v');
 [numY,denY] = tfdata(drone(2,2),'v');
 [numZ,denZ] = tfdata(drone(3,3),'v');
+
+t = 2.5;
+roll0 = 10;
+pitch0 = -10;
+yaw0 = 5;
+simOut = sim('Drone','SimulationMode','normal');
+plot(simOut.RPY(:,1),rad2deg(simOut.RPY(:,2)))
+hold on
+plot(simOut.RPY(:,1),rad2deg(simOut.RPY(:,3)))
+hold on
+plot(simOut.RPY(:,1),rad2deg(simOut.RPY(:,4)))
+grid on
+title('Simulation Result of PID Control')
+xlabel('Time [s]')
+ylabel('Angle [deg]')
+legend('Roll','Pitch','Yaw')

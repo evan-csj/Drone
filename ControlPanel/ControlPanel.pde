@@ -4,12 +4,13 @@ Serial port;
 //button setup
 color bg, buttoncolor, highlight, green, greenH, yellow, yellowH, red, redH, grey, greyH, blue, blueH, navy, navyH;
 SqButton up, down, left, right, forward, backward, center, stop;
-RectButton r1u, r1d, r2u, r2d, r3u, r3d, r4u, r4d, pgu, igu, dgu, pgd, igd, dgd;
+RectButton r1u, r1d, r2u, r2d, r3u, r3d, r4u, r4d, pgu, igu, dgu, pgd, igd, dgd, record, save;
 boolean locked = false;
 String string = "";
 String stringUpdate = "";
 String[] stringList;
 String[] lineList;
+boolean firstLine = false;
 boolean datalog = false;
 PFont font;
 int size = 120, xsize = size, ysize = xsize/2;
@@ -86,6 +87,10 @@ void setup() {
    igd = new RectButton(space*3 + size*2, space*4 + size*3 + ysize, xsize, ysize, blue, blueH);
    dgd = new RectButton(space*4 + size*3, space*4 + size*3 + ysize, xsize, ysize, blue, blueH);
    
+   // Record
+   record = new RectButton(space, space*5 + size*4, 2*xsize + space, 2*ysize, red, redH);
+   save = new RectButton(space*3 + size*2, space*5 + size*4, 2*xsize + space, 2*ysize, green, greenH);
+   
    table = new Table();
    table.addColumn("Time");
    table.addColumn("Roll");
@@ -120,6 +125,8 @@ void draw() {
    pgd.display();
    igd.display();
    dgd.display();
+   record.display();
+   save.display();
    
    drawArrow(space*3 + size*2 + size/2, space + size/5*4, size/5*3, -90);
    drawArrow(space*4 + size*3 + size/5, space*2 + size + size/2, size/5*3, 0);
@@ -130,6 +137,7 @@ void draw() {
    textAlign(LEFT, TOP);
    text(stringUpdate, space*5 + size*4, space, size*4, space*6 + size*5);
    textAlign(CENTER, CENTER);
+   
    text("UP", space, space*2 + size, size, size);
    text("DOWN", space, space*3 + size*2, size, size);
    text("STOP", space, space*4 + size*3, size, size);
@@ -140,6 +148,9 @@ void draw() {
    text("P", space*2 + size, space*4 + size*3, size, size);
    text("I", space*3 + size*2, space*4 + size*3, size, size);
    text("D", space*4 + size*3, space*4 + size*3, size, size);
+   text("RECORD", space, space*5 + size*4, 2*size + space, size);
+   text("SAVE", space*3 + size*2, space*5 + size*4, 2*size + space, size);
+   
    stroke(255);
    strokeWeight(size/50);
 }
@@ -168,6 +179,8 @@ void update(int x, int y) {
       pgd.update();
       igd.update();
       dgd.update();
+      record.update();
+      save.update();
    } else {
       locked = false;
    }
@@ -217,6 +230,10 @@ void update(int x, int y) {
          port.write('i');
       }else if(dgd.pressed()) {
          port.write('d');
+      }else if(record.pressed()){
+        datalog = true;
+      }else if(save.pressed()){
+        saveTable(table, "data/TestResult.csv");
       }
       delay(200);
    }
@@ -224,8 +241,8 @@ void update(int x, int y) {
 
 void serialEvent(Serial port) {
   string = port.readString();
-  if(!datalog){
-    datalog = true;
+  if(!firstLine){
+    firstLine = true;
   }else{
     stringUpdate = "";
     stringList = split(string, " ");
@@ -247,10 +264,15 @@ void serialEvent(Serial port) {
     stringUpdate += "Voltage: ";
     stringUpdate += stringList[5];
     stringUpdate += " V\n";
-    stringUpdate += "Loop Time: ";
+    stringUpdate += "Distance: ";
     stringUpdate += stringList[6];
+    stringUpdate += " cm\n";
+    stringUpdate += "Loop Time: ";
+    stringUpdate += stringList[7];
     stringUpdate += " us\n";
-    
+  }
+  
+  if(datalog == true){ 
     newRow = table.addRow();
     newRow.setString("Time", stringList[0]);
     lineList = split(stringList[1], ',');
@@ -373,6 +395,7 @@ void keyPressed()
 {
   //save as a table in csv format(data/table - data folder name table)
   saveTable(table, "data/TestResult.csv");
+  port.write('S');
   port.stop();
   exit();
 }

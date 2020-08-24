@@ -1,6 +1,6 @@
 // defines pins numbers
-const int trigPin = 24;
-const int echoPin = 25;
+const int trigPin = 6;
+const int echoPin = 7;
 const int averageNumber = 20;
 
 // defines variables
