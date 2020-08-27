@@ -11,7 +11,7 @@ Ixx = 0.0118; % moment of inertia
 Iyy = 0.0118;
 Izz = 0.0225;
 Tf = 0;
-Ts = 0.007;
+Ts = 0.01;
 
 % phi theta psi phi_d theta_d psi_d
 % U1 U2 U3
@@ -35,7 +35,7 @@ sysd = c2d(sys,Ts);
 Control = rank(ctrb(sys));
 Observe = rank(obsv(sys));
 
-drone = tf(sys);
+drone = tf(sysd);
 
 KpRoll = 6.5E6;
 KiRoll = 3.8E6;
@@ -49,9 +49,9 @@ KpYaw = 1.6E7;
 KiYaw = 9.2E6;
 KdYaw = 6.9E6;
 
-pidRoll = pid(KpRoll,KiRoll,KdRoll);
-pidPitch = pid(KpPitch,KiPitch,KdPitch);
-pidYaw = pid(KpYaw,KiYaw,KdYaw);
+pidRoll = pid(KpRoll,KiRoll,KdRoll,Tf,Ts);
+pidPitch = pid(KpPitch,KiPitch,KdPitch,Tf,Ts);
+pidYaw = pid(KpYaw,KiYaw,KdYaw,Tf,Ts);
 
 tfRoll = feedback(pidRoll*drone(1,1),1);
 tfPitch = feedback(pidPitch*drone(2,2),1);

@@ -87,9 +87,9 @@ float dErrors[3] = {0, 0, 0};
 float iErrors[3] = {0, 0, 0};
 float preErrors[3] = {0, 0, 0};
 
-float Kp = 1;
-float Ki = 0;
-float Kd = 15;
+float Kp = 155;
+float Ki = 0.17;
+float Kd = 356;
 
 float KpYaw = 0;
 float KiYaw = 0;
@@ -192,14 +192,14 @@ void loop() {
          command = Serial3.read();
          switch(command){
           case 'A':
-            if(pwm < 1300) pwm += 50;
+            if(pwm < 1200) pwm += 50;
             else if(pwm < 1450) pwm += 10;
             else pwm += 1;
             stopFlag = false;
             break;
           case 'V':
             if(pwm < 1000) pwm = 950;
-            else if(pwm <= 1300) pwm -= 50;
+            else if(pwm <= 1200) pwm -= 50;
             else if(pwm <= 1450) pwm -= 10;
             else pwm -= 1;
             break;
@@ -251,15 +251,15 @@ void loop() {
       if(pwm < 950) pwm = 950;
      }
 
-    ESC1.writeMicroseconds(pwm1 + r1);
-//    ESC2.writeMicroseconds(pwm2 + r2);
-    ESC3.writeMicroseconds(pwm3 + r3);
-//    ESC4.writeMicroseconds(pwm4 + r4);
+//    ESC1.writeMicroseconds(pwm1 + r1);
+    ESC2.writeMicroseconds(pwm2 + r2);
+//    ESC3.writeMicroseconds(pwm3 + r3);
+    ESC4.writeMicroseconds(pwm4 + r4);
 
-//    ESC1.writeMicroseconds(0);
-    ESC2.writeMicroseconds(0);
-//    ESC3.writeMicroseconds(0);
-    ESC4.writeMicroseconds(0);
+    ESC1.writeMicroseconds(0);
+//    ESC2.writeMicroseconds(0);
+    ESC3.writeMicroseconds(0);
+//    ESC4.writeMicroseconds(0);
 
     voltageSensor = analogRead(A0);
     voltage = voltageSensor / 1024 * vcc * factor *100 + 5;
@@ -380,13 +380,13 @@ void PIDController() {
     // Do not calculate anything if throttle is 0
     if (thrust >= 950) {
         // PID = e.Kp + ∫e.Ki + Δe.Kd
-//        yaw_pid   = (errors[YAW]   * KpYaw)   + (iErrors[YAW]   * KiYaw)   * dt + (dErrors[YAW]   * KdYaw)   /dt;
-//        pitch_pid = (errors[PITCH] * Kp) + (iErrors[PITCH] * Ki) * dt + (dErrors[PITCH] * Kd) /dt;
-//        roll_pid  = (errors[ROLL]  * Kp)  + (iErrors[ROLL]  * Ki)  * dt + (dErrors[ROLL]  * Kd)  /dt;
+        yaw_pid   = (errors[YAW]   * KpYaw) + (iErrors[YAW]   * KiYaw) * dt + (dErrors[YAW]   * KdYaw) /dt;
+        pitch_pid = (errors[PITCH] * Kp)    + (iErrors[PITCH] * Ki)    * dt + (dErrors[PITCH] * Kd)    /dt;
+        roll_pid  = (errors[ROLL]  * Kp)    + (iErrors[ROLL]  * Ki)    * dt + (dErrors[ROLL]  * Kd)    /dt;
 
-        yaw_pid   = (errors[YAW]   * KpYaw) + (iErrors[YAW]   * KiYaw) + (dErrors[YAW]   * KdYaw);
-        pitch_pid = (errors[PITCH] * Kp)    + (iErrors[PITCH] * Ki)    + (dErrors[PITCH] * Kd);
-        roll_pid  = (errors[ROLL]  * Kp)    + (iErrors[ROLL]  * Ki)    + (dErrors[ROLL]  * Kd);
+//        yaw_pid   = (errors[YAW]   * KpYaw) + (iErrors[YAW]   * KiYaw) + (dErrors[YAW]   * KdYaw);
+//        pitch_pid = (errors[PITCH] * Kp)    + (iErrors[PITCH] * Ki)    + (dErrors[PITCH] * Kd);
+//        roll_pid  = (errors[ROLL]  * Kp)    + (iErrors[ROLL]  * Ki)    + (dErrors[ROLL]  * Kd);
 
         // Keep values within acceptable range. TODO export hard-coded values in variables/const
 //        yaw_pid   = minMax(yaw_pid, -400, 400);
@@ -394,15 +394,10 @@ void PIDController() {
 //        roll_pid  = minMax(roll_pid, -400, 400);
 
         // Calculate pulse duration for each ESC
-        pwm1 = - 2*pitch_pid + yaw_pid + thrust;
-        pwm2 = - 2*roll_pid  - yaw_pid + thrust;
-        pwm3 = + 2*pitch_pid + yaw_pid + thrust;
-        pwm4 = + 2*roll_pid  - yaw_pid + thrust;
-
-//        pwm1 = 0.5*sqrt( + roll_pid + pitch_pid - yaw_pid + z_pid);
-//        pwm2 = 0.5*sqrt( - roll_pid + pitch_pid + yaw_pid + z_pid);
-//        pwm3 = 0.5*sqrt( - roll_pid - pitch_pid - yaw_pid + z_pid);
-//        pwm4 = 0.5*sqrt( + roll_pid - pitch_pid + yaw_pid + z_pid);
+        pwm1 = 0.5*sqrt(- 2*pitch_pid + yaw_pid + z_pid);
+        pwm2 = 0.5*sqrt(- 2*roll_pid  - yaw_pid + z_pid);
+        pwm3 = 0.5*sqrt(+ 2*pitch_pid + yaw_pid + z_pid);
+        pwm4 = 0.5*sqrt(+ 2*roll_pid  - yaw_pid + z_pid);
     }
     
     pwm1 = minMax(pwm1, 950, 2000);

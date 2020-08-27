@@ -258,8 +258,10 @@ void serialEvent(Serial port) {
     stringUpdate += "PID: ";
     stringUpdate += stringList[3];
     stringUpdate += "\n";
+    
+    lineList = split(stringList[4], ',');
     stringUpdate += "PWM: ";
-    stringUpdate += stringList[4];
+    stringUpdate += lineList[0];
     stringUpdate += "\n";
     stringUpdate += "Voltage: ";
     stringUpdate += stringList[5];
@@ -279,6 +281,11 @@ void serialEvent(Serial port) {
     newRow.setString("Roll", lineList[0]);
     newRow.setString("Pitch", lineList[1]);
     newRow.setString("Yaw", lineList[2]);
+    lineList = split(stringList[4], ',');
+    newRow.setString("R1", lineList[1]);
+    newRow.setString("R2", lineList[2]);
+    newRow.setString("R3", lineList[3]);
+    newRow.setString("R4", lineList[4]);
     newRow.setString("Voltage", stringList[5]);
   }
   
